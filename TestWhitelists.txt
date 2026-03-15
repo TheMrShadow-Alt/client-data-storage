@@ -1,0 +1,11 @@
+
+{
+	"StaffList": [
+		"Mř༒Şħãďø₩¿",
+		"ЁṀṖЁṚØṚ༒Ṣqůìṣĥÿ"
+	],
+	"ExileManifest": [
+		"name1",
+		"name2"
+	]
+}
